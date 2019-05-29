@@ -20,12 +20,7 @@ queries.getNodes = `
                     _id,
                     ip,
                     port,
-                    operating_system,
-                    network_speed,
-                    cpu,
-                    ram,
-                    hdd,
-                    location
+                    ssl
                 },
                 next_cursor
             } 
