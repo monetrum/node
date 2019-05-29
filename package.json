@@ -1,0 +1,52 @@
+{
+  "name": "monetrum-node",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@hapi/joi": "^15.0.3",
+    "apollo-boost": "^0.3.1",
+    "apollo-link": "^1.2.11",
+    "apollo-link-http": "^1.5.14",
+    "apollo-link-ws": "^1.0.17",
+    "base-58": "0.0.1",
+    "dotenv": "^8.0.0",
+    "elliptic": "^6.4.1",
+    "express": "^4.17.0",
+    "graphql": "^14.3.0",
+    "http-proxy": "^1.17.0",
+    "knex": "^0.16.5",
+    "lodash": "^4.17.11",
+    "node-fetch": "^2.6.0",
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.7",
+    "require-dir": "^1.2.0",
+    "ripemd160": "^2.0.2",
+    "speedtest-net": "^1.5.1",
+    "sqlite3": "^4.0.8",
+    "subscriptions-transport-ws": "^0.9.16",
+    "systeminformation": "^4.5.1",
+    "ws": "^7.0.0"
+  },
+  "pkg": {
+    "assets": [
+    ],
+    "scripts": [
+      "consts/**/*",
+      "core/**/*",
+      "helpers/**/*",
+      "library/**/*",
+      "middlewares/**/*",
+      "routes/*/**",
+      "workers/**/*",
+      "validators/**/*"
+    ]
+  },
+  "devDependencies": {}
+}
