@@ -4,7 +4,7 @@ const router = express.Router();
 const knex = registry.get('knex');
 const client = registry.get('client');
 const { queries } = registry.get('consts');
-const { ecdsa } = registry.get('helpers');
+const { ecdsa, queryBuilder } = registry.get('helpers');
 const validators = require('../../validators/wallet');
 
 //--------------------------------------------------------------------------------------------------------------------------------------------------------//
@@ -66,7 +66,7 @@ router.post('/import', async (req, res) => {
 router.post('/update', async (req, res) => {
     try {
         let { address, contract_id, wallet_data } = req.body;
-        let wallet = await knex.table('wallets').select(['id', 'public_key']).where('address', address).limit(1).first();
+        let wallet = await knex.table('wallets').select(['id', 'public_key']).where('address', address || '1').limit(1).first();
         if(!wallet){
             res.json({ status: 'error', message: 'This wallet is not registered in the local database' });
             return;
@@ -80,6 +80,8 @@ router.post('/update', async (req, res) => {
     }
 });
 
+//---------------------------------------------------------------------------------------------------------------------------------------------------------//
+
 router.get('/balance', async (req, res) => {
     if(!req.query.address || !req.query.asset){
         res.json({ status: 'ok', balance: 0 });
@@ -90,8 +92,29 @@ router.get('/balance', async (req, res) => {
     res.json({ status: 'ok', balance: first.balance || 0.00 });
 });
 
+//---------------------------------------------------------------------------------------------------------------------------------------------------------//
+
+router.post('/wallets', async (req, res) => {
+    try {
+        let filter = await validators.wallets.validate(req.body);
+        let filteredKnex = queryBuilder(knex.table('wallets'), filter);
+        let wallets = await filteredKnex.limit(1000);
+        res.json({ status: 'ok', wallets });
+    } catch (e){
+        res.json({ status: 'error', message: e.message });
+    }
+});
+
+
+router.get('/wallet', async (req, res) => {
+    try {
+        let address = req.query.address;
+        let wallet = knex.table('wallet').where('address', address).limit(1).first();
+        res.json({ status: 'ok', wallet: wallet || { } });
+    } catch (e) {
+        res.json({ status: 'error', message: e.message });
+    }    
+});
 //-------------------------------------------------------------------------------------------------------------------------------------------------------//
-
-
 
 module.exports = () => router;

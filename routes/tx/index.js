@@ -10,7 +10,7 @@ const validators = require('../../validators/tx');
 
 router.get('/last-seq', async (req, res) => {
     let lastTx = await knex.table('tx').select(['seq']).orderBy('seq', 'DESC').limit(1).first();
-    res.json(lastTx ? lastTx.seq : 0);
+    res.json({ status: 'ok', seq: lastTx ? lastTx.seq : 0 });
 });
 
 //--------------------------------------------------------------------------------------------------//
@@ -27,7 +27,26 @@ router.get('/txes', async (req, res) => {
         txes = await knex.table('tx').where('seq', '>', from).orderBy('seq', 'ASC').limit(limit);
     }
 
-    res.json(txes);
+    res.json({ status: 'ok', txes});
+});
+
+router.get('/tx', async (req, res) => {
+    let _knex = knex.table('tx');
+    if(!req.query.hash && !req.query.seq){
+        res.json({ status: 'error', message: 'seq or hash required' });
+        return;
+    }
+
+    if(req.query.hash){
+        _knex = _knex.where('hash', req.query.hash);
+    }
+
+    if(req.query.seq){
+        _knex = _knex.where('seq', req.query.seq);
+    }
+    
+    let tx = await _knex.limit(1).first();
+    res.json({ status: 'ok', tx: tx || {} });
 });
 
 //--------------------------------------------------------------------------------------------------//
@@ -35,11 +54,11 @@ router.get('/txes', async (req, res) => {
 router.post('/txes', async (req, res) => {
     try {
         let filter = await validators.txes.validate(req.body);
-        let filteredKnex =  queryBuilder(knex.table('tx'),  filter);
+        let filteredKnex = queryBuilder(knex.table('tx'),  filter);
         let txes = await filteredKnex.limit(1000);
-        res.json(txes);
+        res.json({ status: 'ok', txes });
     } catch (e){
-        res.json([]);
+        res.json({ status: 'error', message: e.message });
     }
 });
 
@@ -72,7 +91,7 @@ router.post('/send', async (req, res) => {
         let wallet = await knex.table('wallets').select(['id', 'private_key', 'public_key']).where('address', from || 'x').first();
         if(!wallet){
             res.json({ status: 'error', message: 'This wallet is not registered in the local database' });
-            return;;
+            return;
         }
 
         let nonce = String(new Date().getTime());

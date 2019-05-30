@@ -4,11 +4,24 @@ const request = require('request-promise-native');
 const { stc, ecdsa, blockchain, sleep, systeminfo } = registry.get('helpers');
 const env = registry.get('env');
 
+async function formatter(callback, field = undefined){
+    try {
+        let res = await callback();
+        let jsonres = typeof res === 'object' ? res : JSON.parse(res);
+        if(jsonres.status === 'error') throw new Error(jsonres.message);
+        return field ? jsonres[field] : jsonres;
+    } catch (e) {
+        return e; 
+    }
+}
+
+
 class Sync {
     constructor(client, knex){
         return new Promise( async (resolve, reject) => {
+            console.log('sistem bilgileriniz ve internet hızınız hesaplanıyor');
             this.knex = knex;
-            this.client = client;
+            this.client = client;            
             let result = await stc(async () => await this.client.mutation(queries.addNode, { info: { ... await systeminfo(), port: parseInt(env.LISTEN_PORT), ssl: env.SSL === '1' }}));
             if(result instanceof Error){
                 reject(result);
@@ -47,11 +60,11 @@ class Sync {
     }
 
     async checkNodeSeq(ip, port, ssl = false){
-        return await stc(async () => JSON.parse(await request.get(`${ssl == true ? 'https' : 'http:'}//${ip}:${port}/tx/last-seq`)));
+        return await formatter(() => request.get(`${ssl == true ? 'https' : 'http:'}//${ip}:${port}/tx/last-seq`), 'seq');
     }
 
     async reportConfirmRate(ip, port, ssl = false, seq){
-        return await stc(async () => JSON.parse(await request.post(`${ssl == true ? 'https' : 'http:'}//${ip}:${port}/tx/update-confirm-rate`, { json: { seq }})));
+        return await formatter(() => request.post(`${ssl == true ? 'https' : 'http:'}//${ip}:${port}/tx/update-confirm-rate`, { json: { seq }}));
     }
 
     async lastSeq(){
@@ -62,7 +75,7 @@ class Sync {
     async *nodeTxIterator(ip, port, from = 0, ssl = false){
         let lastSeq = from;
         while(true){
-            let txes = await stc(async () => JSON.parse(await request.get(`${ssl == true ? 'https:' : 'http:'}//${ip}:${port}/tx/txes?from=${lastSeq}&limit=1000`)));
+            let txes = await formatter(() => request.get(`${ssl == true ? 'https:' : 'http:'}//${ip}:${port}/tx/txes?from=${lastSeq}&limit=1000`), 'txes');
             if(txes instanceof Error){
                 yield new Error('txes fetch failed');
                 return;
@@ -89,7 +102,7 @@ class Sync {
         while(true){
             let resp = await stc(async () => (await this.client.query(queries.getTxList, { filters: { seq: { gt: seq } }, sorting: { _id: 'ASC', seq: 'ASC' }, limit: 100, cursor })));
             if(resp instanceof Error){
-                yield new Error('txes fetch failed' + resp.message);
+                yield new Error('txes fetch failed', node.ip, node.port);
                 return;
             }
 
@@ -112,23 +125,18 @@ class Sync {
         }
     }
 
-    async synchronize(){
-        let mnseq = (await this.client.query(queries.lastSeq)).tx.lastSeq;
+    async txSynchronize(){
         let sync = false;
         let localSeq = await this.lastSeq();
-        if(mnseq === localSeq){
-            return;
-        }
 
         nodesfor:
         for await (let node of this.nodesIterator()){
             let nodeLastSeq = await this.checkNodeSeq(node.ip, node.port, node.ssl);
             if(nodeLastSeq instanceof Error){
-                console.log(nodeLastSeq);
                 continue;
             }
 
-            if(nodeLastSeq !== mnseq){
+            if(nodeLastSeq <= localSeq){
                 continue;
             }
 
@@ -137,7 +145,6 @@ class Sync {
             txfor:
             for await (let tx of this.nodeTxIterator(node.ip, node.port, seq, node.ssl)){
                 if(tx instanceof Error){
-                    console.log(tx);
                     sync = false;
                     break txfor;
                 }
@@ -151,7 +158,7 @@ class Sync {
                     }
 
                     if(!ecdsa.verify(tx.public_key, `${tx.from}__${tx.to}__${0 - Math.abs(tx.amount)}__${tx.asset}__${tx.nonce}`, tx.sign)){
-                        console.log('sign geçersiz');
+                        console.log('sign geçersiz', tx.hash, tx.sign);
                         sync = false;
                         break txfor;
                     }
@@ -159,7 +166,7 @@ class Sync {
 
                 let hash = blockchain.createHash({ prevHash: tx.prev_hash, from: tx.from, to: tx.to, amount: tx.amount, asset: tx.asset, nonce: tx.nonce });
                 if(tx.seq !== 1 && hash !== tx.hash){
-                    console.log('hash geçersiz');
+                    console.log('hash geçersiz', tx.hash);
                     sync = false;
                     break txfor;
                 }
@@ -167,14 +174,13 @@ class Sync {
                 let nodeAddress = `${node.ssl == true ? 'https:' : 'http:'}//${node.ip}:${node.port}`;
                 let inserted = await stc(async () => await this.knex.table('tx').insert({ ...tx, confirm_rate: tx.confirm_rate + 1, node: nodeAddress }));
                 if(inserted instanceof Error){
-                    console.log(inserted);
-                    throw new Error('tx insert failed');
+                    throw new Error('işlem veritabanına eklenemedi', inserted.message);
                 }
 
                 await this.reportConfirmRate(node.ip, node.port, node.ssl, tx.seq);
-                console.log('new tx synchorized', tx.seq, tx.hash, node.ip, node.port);
+                console.log('yeni işlem ', tx.seq, tx.hash, node.ip, node.port);
 
-                if(tx.seq === mnseq){
+                if(tx.seq === nodeLastSeq){
                     sync = true;
                     break nodesfor;
                 }
@@ -185,16 +191,16 @@ class Sync {
             let seq = await this.lastSeq();
             for await (let tx of this.mnTxIterator(seq)){
                 if(tx instanceof Error){
-                    throw new Error('tx fetch failed' + tx.message);
+                    throw new Error('işlem çekme başarısız ' + tx.message);
                 }
 
                 let inserted = await stc(async () => await this.knex.table('tx').insert({ ...tx, confirm_rate: tx.confirm_rate + 1, node: 'masternode'}));
                 if(inserted instanceof Error){
-                    throw new Error('tx insert failed');
+                    throw new Error('işlem veritabanına eklenemedi', inserted.message);
                 }
 
                 await stc(async () => await this.client.mutation(queries.updateConfirmRate, { seq: tx.seq }));
-                console.log('new tx synchorized', tx.seq, tx.hash, 'masternode');
+                console.log('yeni işlem', tx.seq, tx.hash, 'masternode');
             }
         }
     }

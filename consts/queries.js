@@ -22,6 +22,7 @@ queries.getNodes = `
                     port,
                     ssl
                 },
+                
                 next_cursor
             } 
         }
@@ -70,12 +71,7 @@ queries.addNode = `
                 _id,
                 ip,
                 port,
-                operating_system,
-                network_speed,
-                cpu,
-                ram,
-                hdd,
-                location
+                ssl
             }
         }
     }

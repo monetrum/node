@@ -25,4 +25,22 @@ validators.import = joi.object({
     private_key: joi.string().required()
 });
 
+//-----------------------------------------------------------------//
+
+validators.wallets = joi.array().items(
+    joi.object({
+        field: joi.string().required().valid(['id', 'account_id', 'address']),
+        operator: joi.string().required().valid(['>', '<', '>=', '<=', '=', 'IN', 'NOT IN']),
+        value: joi.any().required()
+    }),
+    
+    joi.object({
+        or: joi.lazy(() => validators.wallets)
+    }),
+
+    joi.object({
+        and: joi.lazy(() => validators.wallets)
+    })
+)
+
 module.exports = validators;

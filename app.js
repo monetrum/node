@@ -2,9 +2,7 @@
 global.registry = require('./core/registry');
 global.cwd = require('./core/cwd-resolver')(__dirname);
 
-// console.log(__dirname, cwd);
-
-const env = require('dotenv').config({ path: cwd + '/.env' }).parsed;
+const env = require('dotenv').config({ path: cwd + '/.env' }).parsed || { };
 const express = require('express');
 const app = express();
 const http = require('http');
@@ -12,27 +10,16 @@ const httpServer = http.createServer(app);
 const bodyParser = require('body-parser');
 const requireDir = require('require-dir');
 const httpProxy = require('http-proxy');
+const validator = require('./validators/env');
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-function graphQLErrorCallback(e){
-    if(e.networkError) {
-        e.networkError.result.errors.forEach((element) => {
-            throw new GraphQLError(element.message);
-        })
-    }
-
-    if(e.graphQLErrors.length > 0){
-        e.graphQLErrors.forEach(element => {
-            throw new GraphQLError(element.message);
-        });
-    }
-}
-
 async function init(){
+    await validator.env.validate(env);
     let knex = require('knex')({ client: 'sqlite3', connection: { filename: cwd + '/data.db' }, useNullAsDefault: true });
     let proxy = httpProxy.createProxyServer({ });
+    
     proxy.on('error', e => console.error(e.message));
     
     registry.set('proxy', proxy);
@@ -65,15 +52,11 @@ async function init(){
         }
 
         working = true;
-        let res = await stc(async () => await sync.synchronize());
-        if(res instanceof Error){
-            console.error(res);
-        }
-
+        await stc(async () => await sync.txSynchronize());
         working = false;
     };
 
     setInterval(intervalcb, 3000);
 }
 
-init().then(() => console.log('node started', env.LISTEN_HOST, env.LISTEN_PORT)).catch(e => console.error(e));
+init().then(() => console.log('node başladı', env.LISTEN_HOST, env.LISTEN_PORT)).catch(e => console.error(e));
