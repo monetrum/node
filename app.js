@@ -45,18 +45,34 @@ async function init(){
     httpServer.listen(parseInt(env.LISTEN_PORT), env.LISTEN_HOST);
     let Sync = require('./workers/sync');
     let sync = await new Sync(client, knex);
-    let working = false;
-    let intervalcb = async () => {
-        if(working === true){
+    //----------------------------------------------------------------------------//
+    let txWorking = false;
+    let txIntervalcb = async () => {
+        if(txWorking === true){
             return;
         }
 
-        working = true;
-        await stc(async () => await sync.txSynchronize());
-        working = false;
+        txWorking = true;
+        await stc(() => sync.txSynchronize());
+        txWorking = false;
     };
 
-    setInterval(intervalcb, 3000);
+    //---------------------------------------------------------------------------//
+    let nodesWorking = false;
+    let nodesIntervalcb = async () => {
+        if(nodesWorking === true){
+            return;
+        }
+
+        nodesWorking = true;
+        await stc(() => sync.nodeSynchronize());
+        nodesWorking = false;
+    };
+
+    //---------------------------------------------------------------------------//
+    
+    setInterval(txIntervalcb, 3000);
+    setInterval(nodesIntervalcb, 30 * 60 * 1000);
 }
 
 init().then(() => console.log('node başladı', env.LISTEN_HOST, env.LISTEN_PORT)).catch(e => console.error(e));

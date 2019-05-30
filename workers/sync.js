@@ -37,24 +37,16 @@ class Sync {
     }
 
     async *nodesIterator(){
-        let cursor = null;
+        let lastId = 0;
         while(true){
-            let resp = await stc(async () => await this.client.query(queries.getNodes, { filters: { accessible_service: true }, sorting: { _id: 'ASC' }, limit: 100, cursor }));
-            if(resp instanceof Error){
-                yield new Error('nodes fetch failed');
-                return;
-            }
-
-            cursor = resp.nodes.getNodes.next_cursor;
-            if(resp.nodes.getNodes.nodes.length === 0){
+            let nodes = await this.knex('nodes').where('id', '>', lastId).limit(1000);
+            if(nodes.length === 0){
                 break;
             }
 
-            for(let node of resp.nodes.getNodes.nodes){
-                if(node.ip !== env.LISTEN_HOST && node.port !== env.LISTEN_PORT){
-                    delete node.__typename;
-                    yield node;
-                }
+            lastId = nodes[ nodes.length -1 ].id;
+            for(let node of nodes){
+                yield node;
             }
         }
     }
@@ -121,6 +113,39 @@ class Sync {
                 delete tx.__typename;
                 tx.data = JSON.stringify(tx.data);
                 yield tx;
+            }
+        }
+    }
+
+
+    async nodeSynchronize(){
+        let cursor = null;
+        while(true){
+            let resp = await stc(async () => await this.client.query(queries.getNodes, { filters: { }, sorting: { _id: 'ASC' }, limit: 1000, cursor }));
+            if(resp instanceof Error){
+                console.log('nodes fetch failed', resp.message);
+                return;
+            }
+
+            cursor = resp.nodes.getNodes.next_cursor;
+            if(resp.nodes.getNodes.nodes.length === 0){
+                break;
+            }
+
+            for(let node of resp.nodes.getNodes.nodes){
+                if(node.ip !== env.LISTEN_HOST && node.port !== env.LISTEN_PORT){
+                    delete node.__typename;
+                    let localNode = await this.knex.table('nodes').where('ip', node.ip).where('port', node.port).first();
+                    if(localNode && node.accessible_service === false){
+                        await this.knex.table('nodes').where('id', localNode.id).delete();
+                        continue;
+                    }
+
+                    if(!localNode && node.accessible_service === true){
+                        await this.knex.table('nodes').insert({ ip: node.ip, port: node.port, ssl: node.ssl });
+                        continue;
+                    }
+                }
             }
         }
     }

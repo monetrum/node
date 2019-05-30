@@ -52,6 +52,15 @@ const tx = table => {
     table.index(['complete_time']);
 };
 
+const nodes = table => {
+    table.increments('id').primary();
+    table.string('ip').notNullable();
+    table.integer('port').notNullable();
+    table.boolean('ssl');
+    //----------------------------------------------------------//
+    table.unique(['ip', 'port']);
+};
+
 async function migration(knex){
 
     if(!(await knex.schema.hasTable('wallets'))){
@@ -60,6 +69,10 @@ async function migration(knex){
 
     if(!(await knex.schema.hasTable('tx'))){
         await knex.schema.createTable('tx', tx);
+    }
+
+    if(!(await knex.schema.hasTable('nodes'))){
+        await knex.schema.createTable('nodes', nodes);
     }
 }
 

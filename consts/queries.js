@@ -17,10 +17,10 @@ queries.getNodes = `
         nodes {
             getNodes(filters: $filters, sorting: $sorting, limit: $limit, cursor: $cursor){
                 nodes {
-                    _id,
                     ip,
                     port,
-                    ssl
+                    ssl,
+                    accessible_service
                 },
                 
                 next_cursor
