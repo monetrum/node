@@ -70,7 +70,8 @@ async function init(){
     };
 
     //---------------------------------------------------------------------------//
-    
+    await nodesIntervalcb();
+        
     setInterval(txIntervalcb, 3000);
     setInterval(nodesIntervalcb, 30 * 60 * 1000);
 }

@@ -34,6 +34,7 @@ const tx = table => {
     table.string('data');
     table.string('desc');
     table.string('contract_id');
+    table.string('contract_wallet');
     table.decimal('fee', 15, 2);
     table.string('fee_asset');
     table.string('nonce');

@@ -187,10 +187,22 @@ class Sync {
                         sync = false;
                         break txfor;
                     }
+
+                    if(tx.contract_wallet && ecdsa.addressFromPublicKey(tx.public_key) !== tx.contract_wallet){
+                        console.log('sign geçersiz', tx.hash, tx.sign);
+                        sync = false;
+                        break txfor;
+                    }
+
+                    if(!tx.contract_wallet && ecdsa.addressFromPublicKey(tx.public_key) !== tx.tx.from){
+                        console.log('sign geçersiz', tx.hash, tx.sign);
+                        sync = false;
+                        break txfor;
+                    }
                 }
 
                 let hash = blockchain.createHash({ prevHash: tx.prev_hash, from: tx.from, to: tx.to, amount: tx.amount, asset: tx.asset, nonce: tx.nonce });
-                if(tx.seq !== 1 && hash !== tx.hash){
+                if(hash !== tx.hash){
                     console.log('hash geçersiz', tx.hash);
                     sync = false;
                     break txfor;

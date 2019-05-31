@@ -55,7 +55,8 @@ queries.getTxList = `
                     data,
                     status,
                     public_key,
-                    sign
+                    sign,
+                    contract_wallet
                 },
                 next_cursor
             }
@@ -164,16 +165,17 @@ queries.send = `
                 to,
                 sign,
                 complete_time,
-                status
+                status,
+                contract_wallet
             }
         }
     }
 `;
 
 queries.update = `
-    mutation($public_key: String!, $contract_id: ObjectID, $wallet_data: JSON) {
+    mutation($public_key: String!, $sign: String!, $contract_id: ObjectID, $wallet_data: JSON) {
         wallet {
-            update(public_key: $public_key, contract_id: $contract_id, wallet_data: $wallet_data){
+            update(public_key: $public_key, sign: $sign, contract_id: $contract_id, wallet_data: $wallet_data){
                 public_key,
                 contract_id,
                 asset,

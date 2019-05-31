@@ -72,7 +72,8 @@ router.post('/update', async (req, res) => {
             return;
         }
         
-        let resp = (await client.mutation(queries.update, { public_key: wallet.public_key, contract_id, wallet_data })).wallet.update;
+        let sign = ecdsa.signing(wallet.private_key, 'OK');
+        let resp = (await client.mutation(queries.update, { public_key: wallet.public_key, sign, contract_id, wallet_data })).wallet.update;
         await knex.table('wallets').where('address', address).update({ contract_id: contract_id || null });
         res.json({ status: 'error', wallet: { id: wallet.id, ...resp } });
     } catch (e) {
