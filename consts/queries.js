@@ -34,7 +34,6 @@ queries.getTxList = `
         tx {
             getTxList(filters: $filters, sorting: $sorting, limit: $limit, cursor: $cursor){
                 transactions {
-                    _id,
                     action_time,
                     asset,
                     complete_time,

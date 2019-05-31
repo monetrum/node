@@ -109,7 +109,6 @@ class Sync {
 
             cursor = resp.tx.getTxList.next_cursor;
             for(let tx of resp.tx.getTxList.transactions){
-                delete tx._id;
                 delete tx.__typename;
                 tx.data = JSON.stringify(tx.data);
                 yield tx;
@@ -203,7 +202,7 @@ class Sync {
 
                 let hash = blockchain.createHash({ prevHash: tx.prev_hash, from: tx.from, to: tx.to, amount: tx.amount, asset: tx.asset, nonce: tx.nonce });
                 if(hash !== tx.hash){
-                    console.log('hash geçersiz', tx.hash);
+                    console.log('hash geçersiz', hash + ' != ' + tx.hash);
                     sync = false;
                     break txfor;
                 }
