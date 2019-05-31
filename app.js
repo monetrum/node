@@ -41,10 +41,11 @@ async function init(workerId){
     (new loader(app, __dirname + '/routes')).routers();
     //------------------------------------------------------------------------------//
     let { migration } = registry.get('consts');
-    await migration(knex);
     //-----------------------------------------------------------------------------//
     httpServer.listen(parseInt(env.LISTEN_PORT), env.LISTEN_HOST);
+    
     if(workerId === 1){
+        await migration(knex);
         let Sync = require('./workers/sync');
         let sync = await new Sync(client, knex);
         //----------------------------------------------------------------------------//
@@ -80,7 +81,6 @@ async function init(workerId){
     }
 }
 
-
 if(cluster.isMaster){
     let threads = env.THREADS ? parseInt(env.THREADS) : 2;
     for (let i = 0; i < threads; i++) {
@@ -95,8 +95,6 @@ if(cluster.isMaster){
     });
 
 } else {
-    if(cluster.isWorker){
-        init(cluster.worker.id).then(() => console.log('node başladı', env.LISTEN_HOST, env.LISTEN_PORT)).catch(e => console.error(e));
-    }
+    init(cluster.worker.id).then(() => console.log('node başladı', env.LISTEN_HOST, env.LISTEN_PORT)).catch(e => console.error(e));
 }
 
