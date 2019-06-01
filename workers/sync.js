@@ -3,6 +3,7 @@ const { queries } = registry.get('consts');
 const request = require('request-promise-native');
 const { stc, ecdsa, blockchain, sleep, systeminfo } = registry.get('helpers');
 const env = registry.get('env');
+const _ = require('lodash');
 
 async function formatter(callback, field = undefined){
     try {
@@ -169,6 +170,7 @@ class Sync {
             txfor:
             for await (let tx of this.nodeTxIterator(node.ip, node.port, seq, node.ssl)){
                 if(tx instanceof Error){
+                    console.log(tx);
                     sync = false;
                     break txfor;
                 }
@@ -193,13 +195,13 @@ class Sync {
                         break txfor;
                     }
 
-                    if(!tx.contract_wallet && ecdsa.addressFromPublicKey(tx.public_key) !== tx.tx.from){
+                    if(!tx.contract_wallet && ecdsa.addressFromPublicKey(tx.public_key) !== tx.from){
                         console.log('sign geçersiz', tx.hash, tx.sign);
                         sync = false;
                         break txfor;
                     }
                 }
-
+                
                 let hash = blockchain.createHash({ prevHash: tx.prev_hash, from: tx.from, to: tx.to, amount: tx.amount, asset: tx.asset, nonce: tx.nonce });
                 if(hash !== tx.hash){
                     console.log('hash geçersiz', hash + ' != ' + tx.hash);
@@ -208,15 +210,17 @@ class Sync {
                 }
 
                 let nodeAddress = `${node.ssl == true ? 'https:' : 'http:'}//${node.ip}:${node.port}`;
-                let inserted = await stc(async () => await this.knex.table('tx').insert({ ...tx, confirm_rate: tx.confirm_rate + 1, node: nodeAddress }));
+                let inserted = await stc(() => this.knex.table('tx').insert({ ...tx, confirm_rate: tx.confirm_rate + 1, node: nodeAddress }));
                 if(inserted instanceof Error){
                     throw new Error('işlem veritabanına eklenemedi', inserted.message);
                 }
+
 
                 await this.reportConfirmRate(node.ip, node.port, node.ssl, tx.seq);
                 console.log('yeni işlem ', tx.seq, tx.hash, node.ip, node.port);
 
                 if(tx.seq === nodeLastSeq){
+                    console.log('bitti');
                     sync = true;
                     break nodesfor;
                 }

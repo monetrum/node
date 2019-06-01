@@ -35,8 +35,7 @@
     "ws": "^7.0.0"
   },
   "pkg": {
-    "assets": [
-    ],
+    "assets": [],
     "scripts": [
       "consts/**/*",
       "core/**/*",
