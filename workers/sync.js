@@ -133,15 +133,17 @@ class Sync {
 
             for(let node of resp.nodes.getNodes.nodes){
                 delete node.__typename;
-                let localNode = await this.knex.table('nodes').where('ip', node.ip).where('port', node.port).first();
-                if(localNode && node.accessible_service === false){
-                    await this.knex.table('nodes').where('id', localNode.id).delete();
-                    continue;
-                }
+                if(!(node.ip === env.LISTEN_HOST && node.port === parseInt(env.LISTEN_PORT)){
+                    let localNode = await this.knex.table('nodes').where('ip', node.ip).where('port', node.port).first();
+                    if(localNode && node.accessible_service === false){
+                        await this.knex.table('nodes').where('id', localNode.id).delete();
+                        continue;
+                    }
 
-                if(!localNode && node.accessible_service === true){
-                    await this.knex.table('nodes').insert({ ip: node.ip, port: node.port, ssl: node.ssl });
-                    continue;
+                    if(!localNode && node.accessible_service === true){
+                        await this.knex.table('nodes').insert({ ip: node.ip, port: node.port, ssl: node.ssl });
+                        continue;
+                    }
                 }
             }
         }
@@ -161,7 +163,7 @@ class Sync {
             }
 
             if(nodeLastSeq <= localSeq){
-                console.log(node.ip, node.port, 'node`u', nodeLastSeq, 'sequence numarasına sahip ve geride kalmış. Başka node deneniyor');
+                console.log(node.ip, node.port, 'node`u', nodeLastSeq, 'sequence numarasına sahip. Başka node deneniyor');
                 continue;
             }
 

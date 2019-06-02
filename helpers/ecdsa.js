@@ -28,7 +28,6 @@ function createWallet(){
 
 function checkPrivateKey(privateKey){
     try {
-
         if(!/^.{42,44}$/g.test(privateKey)){
             return false;
         }
@@ -67,7 +66,6 @@ function publicKeyFromPrivateKey(privateKey){
 
 function verify(publicKey, msg, signature){
     try {
-
         if(!(/[0-9A-Fa-f]+/g.test(signature))){
             return false;
         }
