@@ -1,6 +1,11 @@
 'use strict';
 const path = require('path');
-const cwdarr = process.execPath.split('/');
-cwdarr.splice(cwdarr.length - 1, 1);
 
-module.exports = dirname => dirname.indexOf('/snapshot') !== -1 ? path.join('/', ...cwdarr) : dirname;
+function cwdResolver(dirname) {
+    if(dirname.indexOf('/snapshot') === -1) return dirname;
+    let execArr = process.execPath.split(path.sep);
+    let cwdArr = execArr.slice(0, execArr.length - 1).map(x => x === '' ? path.sep : x);
+    return path.join(...cwdArr);
+}
+
+module.exports = cwdResolver;

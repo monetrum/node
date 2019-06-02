@@ -2,8 +2,9 @@
 global.registry = require('./core/registry');
 global.cwd = require('./core/cwd-resolver')(__dirname);
 
+const path = require('path');
 const cluster = require('cluster');
-const env = require('dotenv').config({ path: cwd + '/.env' }).parsed || { };
+const env = require('dotenv').config({ path: path.join(cwd, '.env') }).parsed || { };
 const express = require('express');
 const app = express();
 const http = require('http');
@@ -18,7 +19,7 @@ app.use(bodyParser.json());
 
 async function init(workerId){
     await validator.env.validate(env);
-    let knex = require('knex')({ client: 'sqlite3', connection: { filename: cwd + '/data.db' }, useNullAsDefault: true });
+    let knex = require('knex')({ client: 'sqlite3', connection: { filename: path.join(cwd, 'data.db') }, useNullAsDefault: true });
     let proxy = httpProxy.createProxyServer({ });
     
     proxy.on('error', e => console.error(e.message));
@@ -95,6 +96,6 @@ if(cluster.isMaster){
     });
 
 } else {
-    init(cluster.worker.id).then(() => console.log('node başladı', env.LISTEN_HOST, env.LISTEN_PORT)).catch(e => console.error(e));
+    init(cluster.worker.id).then(() => console.log('node başladı', env.LISTEN_HOST, env.LISTEN_PORT, cluster.worker.id)).catch(e => console.error(e));
 }
 
