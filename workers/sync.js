@@ -152,8 +152,7 @@ class Sync {
     async txSynchronize(){
         let sync = false;
         let localSeq = await this.lastSeq();
-        console.log('localde bulunan son tx sequence numarası', localSeq);
-
+        //console.log('localde bulunan son tx sequence numarası', localSeq);
         nodesfor:
         for await (let node of this.nodesIterator()){
             let nodeLastSeq = await this.checkNodeSeq(node.ip, node.port, node.ssl);
@@ -163,7 +162,7 @@ class Sync {
             }
 
             if(nodeLastSeq <= localSeq){
-                console.log(node.ip, node.port, 'node`u', nodeLastSeq, 'sequence numarasına sahip. Başka node deneniyor');
+                console.log(node.ip, node.port, 'node`u', nodeLastSeq, 'sequence numarasına sahip. Localdeki sequence nmarası ', localSeq , ' Başka node deneniyor');
                 continue;
             }
 
