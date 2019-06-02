@@ -76,7 +76,7 @@ async function init(workerId){
         console.log('node listesi güncelleniyor');
         await nodesIntervalcb();
 
-        setInterval(txIntervalcb, 3000);
+        setInterval(txIntervalcb, 30 * 1000);
         setInterval(nodesIntervalcb, 30 * 60 * 1000);
     }
 }
