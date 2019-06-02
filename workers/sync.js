@@ -133,7 +133,7 @@ class Sync {
 
             for(let node of resp.nodes.getNodes.nodes){
                 delete node.__typename;
-                if(!(node.ip === env.LISTEN_HOST && node.port === parseInt(env.LISTEN_PORT)){
+                if(!(node.ip === env.LISTEN_HOST && node.port === parseInt(env.LISTEN_PORT))){
                     let localNode = await this.knex.table('nodes').where('ip', node.ip).where('port', node.port).first();
                     if(localNode && node.accessible_service === false){
                         await this.knex.table('nodes').where('id', localNode.id).delete();
