@@ -183,7 +183,7 @@ class Sync {
                         break txfor;
                     }
 
-                    if(!ecdsa.verify(tx.public_key, `${tx.from}__${tx.to}__${0 - Math.abs(tx.amount)}__${tx.asset}__${tx.nonce}`, tx.sign)){
+                    if(!ecdsa.verify(tx.public_key, `${tx.from}__${tx.to}__${tx.amount}__${tx.asset}__${tx.nonce}`, tx.sign)){
                         console.log('imza geçersiz', tx.seq, tx.hash);
                         sync = false;
                         break txfor;
@@ -254,17 +254,17 @@ class Sync {
                         break;
                     }
 
-                    if(!ecdsa.verify(tx.public_key, `${tx.from}__${tx.to}__${0 - Math.abs(tx.amount)}__${tx.asset}__${tx.nonce}`, tx.sign)){
+                    if(!ecdsa.verify(tx.public_key, `${tx.from}__${tx.to}__${tx.amount}__${tx.asset}__${tx.nonce}`, tx.sign)){
                         console.log('imza geçersiz', tx.seq, tx.hash);
                         break;
                     }
 
-                    if(tx.contract_wallet && ecdsa.addressFromPublicKey(tx.public_key) !== tx.contract_wallet){
+                    if(tx.contract_wallet && (ecdsa.addressFromPublicKey(tx.public_key) !== tx.contract_wallet)){
                         console.log('imza geçersiz', tx.seq, tx.hash);
                         break;
                     }
 
-                    if(!tx.contract_wallet && ecdsa.addressFromPublicKey(tx.public_key) !== tx.from){
+                    if(!tx.contract_wallet && (ecdsa.addressFromPublicKey(tx.public_key) !== tx.from)){
                         console.log('imza geçersiz', tx.seq, tx.hash);
                         break;
                     }
