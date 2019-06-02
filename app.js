@@ -80,16 +80,25 @@ async function init(workerId){
         setInterval(txIntervalcb, 30 * 1000);
         setInterval(nodesIntervalcb, 30 * 60 * 1000);
     }
+
+    process.send({ cmd: 'ok' });
 }
 
 if(cluster.isMaster){
+    let queue = [];
     let threads = env.THREADS ? parseInt(env.THREADS) : 2;
     for (let i = 0; i < threads; i++) {
-        cluster.fork();
+        if(queue.length === 0){
+            queue.push(cluster.fork());
+        }
+
+        queue[ queue.length - 1 ].on('message', msg => {
+            if (msg.cmd === 'ok' && i !== (threads - 1) ) queue.push(cluster.fork());
+        });
     }
 
     cluster.on('online', worker => console.log('worker ' + worker.process.pid + ' çalıştı'));
-    cluster.on('exit',(worker, code, signal) => {
+    cluster.on('exit',(worker, code) => {
         console.log('worker ' + worker.process.pid + ' şu kod ile durdu: ' + code);
         console.log('yeni worker başlatılıyor');
         cluster.fork();
