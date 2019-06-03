@@ -265,6 +265,11 @@ class Sync {
                         break;
                     }
 
+                    if(tx.contract_wallet && !ecdsa.verify(tx.public_key, tx.from, tx.contract_sign)){
+                        console.log('imza geçersiz bu işlem smart contract tarafından yapılmamış', tx.seq, tx.hash);
+                        break;
+                    }
+
                     if(!tx.contract_wallet && (ecdsa.addressFromPublicKey(tx.public_key) !== tx.from)){
                         console.log('imza geçersiz', tx.seq, tx.hash);
                         break;
