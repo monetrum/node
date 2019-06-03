@@ -64,6 +64,14 @@ const nodes = table => {
     table.unique(['ip', 'port']);
 };
 
+const scinfo = table => {
+    table.increments('id').primary();
+    table.string('address').notNullable();
+    table.string('public_key').notNullable();
+    //----------------------------------------------------------//
+    table.unique(['address', 'public_key']);
+};
+
 async function migration(knex){
 
     if(!(await knex.schema.hasTable('wallets'))){
@@ -76,6 +84,10 @@ async function migration(knex){
 
     if(!(await knex.schema.hasTable('nodes'))){
         await knex.schema.createTable('nodes', nodes);
+    }
+
+    if(!(await knex.schema.hasTable('scinfo'))){
+        await knex.schema.createTable('scinfo', scinfo);
     }
 }
 
