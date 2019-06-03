@@ -85,15 +85,15 @@ async function init(workerId){
 }
 
 if(cluster.isMaster){
-    let queue = [];
     let threads = env.THREADS ? parseInt(env.THREADS) : 2;
+    let firstWorker = null;
     for (let i = 0; i < threads; i++) {
-        if(queue.length === 0){
-            queue.push(cluster.fork());
+        if(!firstWorker){
+            firstWorker = cluster.fork();
         }
 
-        queue[ queue.length - 1 ].on('message', msg => {
-            if (msg.cmd === 'ok' && i !== (threads - 1) ) queue.push(cluster.fork());
+        firstWorker.on('message', msg => {
+            if (msg.cmd === 'ok' && i !== (threads - 1)) cluster.fork();
         });
     }
 
