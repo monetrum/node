@@ -12,6 +12,15 @@ queries.lastSeq = `
     }
 `;
 
+queries.scinfo = `
+    query {
+        smartContractInfo {
+            address,
+            public_key
+        }
+    }
+`;
+
 queries.getNodes = `
     query( $filters: GetNodesFilters!, $sorting: GetNodesSorting!, $limit: Int, $cursor: String){
         nodes {

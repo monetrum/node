@@ -21,12 +21,19 @@ class Sync {
         return new Promise( async (resolve, reject) => {
             console.log('sistem bilgileriniz ve internet hızınız hesaplanıyor');
             this.knex = knex;
-            this.client = client;            
-            let result = await stc(async () => await this.client.mutation(queries.addNode, { info: { ... await systeminfo(), port: parseInt(env.LISTEN_PORT), ssl: env.SSL === '1' }}));
-            if(result instanceof Error){
-                reject(result);
+            this.client = client;
+            //---------------------------------------------------------------------------------------------------------------------------------------------------------------//            
+            let sendinfo = await stc(async () => await this.client.mutation(queries.addNode, { info: { ... await systeminfo(), port: parseInt(env.LISTEN_PORT), ssl: env.SSL === '1' }}));
+            if(sendinfo instanceof Error) reject(sendinfo);
+            //---------------------------------------------------------------------------------------------------------------------------------------------------------------//
+            let scinfo = await stc(() => this.client.query(queries.scinfo, {}));
+            if(scinfo instanceof Error) reject(scinfo);
+            let { address, public_key } = scinfo.smartContractInfo;
+            let exists = await this.knex.table('scinfo').where('address', address).where('public_key', public_key).limit(1).first();
+            if(!exists){
+                await this.knex.table('scinfo').insert({ address, public_key });
             }
-
+            //---------------------------------------------------------------------------------------------------------------------------------------------------------------//
             resolve(this);
         });
     }
@@ -69,7 +76,7 @@ class Sync {
         while(true){
             let txes = await formatter(() => request.get(`${ssl == true ? 'https:' : 'http:'}//${ip}:${port}/tx/txes?from=${lastSeq}&limit=1000`), 'txes');
             if(txes instanceof Error){
-                yield new Error('txes fetch failed');
+                yield new Error('tx çekme başarısız');
                 return;
             }
 
@@ -92,9 +99,9 @@ class Sync {
     async *mnTxIterator(seq){
         let cursor = null;
         while(true){
-            let resp = await stc(async () => (await this.client.query(queries.getTxList, { filters: { seq: { gt: seq } }, sorting: { _id: 'ASC', seq: 'ASC' }, limit: 100, cursor })));
+            let resp = await stc(() => (this.client.query(queries.getTxList, { filters: { seq: { gt: seq } }, sorting: { _id: 'ASC', seq: 'ASC' }, limit: 100, cursor })));
             if(resp instanceof Error){
-                yield new Error('txes fetch failed', node.ip, node.port);
+                yield new Error('tx çekme başarısız');
                 return;
             }
 
@@ -120,7 +127,7 @@ class Sync {
     async nodeSynchronize(){
         let cursor = null;
         while(true){
-            let resp = await stc(async () => await this.client.query(queries.getNodes, { filters: { }, sorting: { _id: 'ASC' }, limit: 1000, cursor }));
+            let resp = await stc(() => this.client.query(queries.getNodes, { filters: { }, sorting: { _id: 'ASC' }, limit: 1000, cursor }));
             if(resp instanceof Error){
                 console.log('node listesi çekme başarısız', resp.message);
                 return;
@@ -190,10 +197,26 @@ class Sync {
                         break txfor;
                     }
 
+<<<<<<< HEAD:workers/sync.js
                     if(tx.contract_wallet && ecdsa.addressFromPublicKey(tx.public_key) !== tx.contract_wallet){
                         console.log('imza geçersiz', tx.seq, tx.hash);
                         sync = false;
                         break txfor;
+=======
+                    if(tx.contract_wallet){
+                        if(ecdsa.addressFromPublicKey(tx.public_key) !== tx.contract_wallet){
+                            console.log('contract server adına illegal işlem', tx.seq, tx.hash);
+                            sync = false;
+                            break txfor;
+                        }
+
+                        let exists = await this.knex.table('scinfo').where('public_key', tx.public_key).where('address', tx.contract_wallet).limit(1).first();
+                        if(!exists){
+                            console.log('contract server adına illegal işlem', tx.seq, tx.hash);
+                            sync = false;
+                            break txfor;
+                        }
+>>>>>>> development:src/workers/sync.js
                     }
 
                     if(!tx.contract_wallet && ecdsa.addressFromPublicKey(tx.public_key) !== tx.from){
@@ -265,6 +288,14 @@ class Sync {
                         break;
                     }
 
+<<<<<<< HEAD:workers/sync.js
+=======
+                    if(tx.contract_wallet && !ecdsa.verify(tx.public_key, tx.from, tx.contract_sign)){
+                        console.log('imza geçersiz bu işlem smart contract tarafından yapılmamış', tx.seq, tx.hash);
+                        break;
+                    }
+
+>>>>>>> development:src/workers/sync.js
                     if(!tx.contract_wallet && (ecdsa.addressFromPublicKey(tx.public_key) !== tx.from)){
                         console.log('imza geçersiz', tx.seq, tx.hash);
                         break;
