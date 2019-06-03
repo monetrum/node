@@ -2,8 +2,9 @@
 global.registry = require('./core/registry');
 global.cwd = require('./core/cwd-resolver')(__dirname);
 
+const path = require('path');
 const cluster = require('cluster');
-const env = require('dotenv').config({ path: cwd + '/.env' }).parsed || { };
+const env = require('dotenv').config({ path: path.join(cwd, '.env') }).parsed || { };
 const express = require('express');
 const app = express();
 const http = require('http');
@@ -18,7 +19,7 @@ app.use(bodyParser.json());
 
 async function init(workerId){
     await validator.env.validate(env);
-    let knex = require('knex')({ client: 'sqlite3', connection: { filename: cwd + '/data.db' }, useNullAsDefault: true });
+    let knex = require('knex')({ client: 'sqlite3', connection: { filename: path.join(cwd, 'data.db') }, useNullAsDefault: true });
     let proxy = httpProxy.createProxyServer({ });
     
     proxy.on('error', e => console.error(e.message));
@@ -76,25 +77,34 @@ async function init(workerId){
         console.log('node listesi güncelleniyor');
         await nodesIntervalcb();
 
-        setInterval(txIntervalcb, 3000);
+        setInterval(txIntervalcb, 30 * 1000);
         setInterval(nodesIntervalcb, 30 * 60 * 1000);
     }
+
+    process.send({ cmd: 'ok' });
 }
 
 if(cluster.isMaster){
     let threads = env.THREADS ? parseInt(env.THREADS) : 2;
+    let firstWorker = null;
     for (let i = 0; i < threads; i++) {
-        cluster.fork();
+        if(!firstWorker){
+            firstWorker = cluster.fork();
+        }
+
+        firstWorker.on('message', msg => {
+            if (msg.cmd === 'ok' && i !== (threads - 1)) cluster.fork();
+        });
     }
 
     cluster.on('online', worker => console.log('worker ' + worker.process.pid + ' çalıştı'));
-    cluster.on('exit',(worker, code, signal) => {
+    cluster.on('exit',(worker, code) => {
         console.log('worker ' + worker.process.pid + ' şu kod ile durdu: ' + code);
         console.log('yeni worker başlatılıyor');
         cluster.fork();
     });
 
 } else {
-    init(cluster.worker.id).then(() => console.log('node başladı', env.LISTEN_HOST, env.LISTEN_PORT)).catch(e => console.error(e));
+    init(cluster.worker.id).then(() => console.log('node başladı', env.LISTEN_HOST, env.LISTEN_PORT, cluster.worker.id)).catch(e => console.error(e));
 }
 

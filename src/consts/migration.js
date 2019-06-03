@@ -48,6 +48,8 @@ const tx = table => {
     table.index(['asset']);
     table.unique(['hash']);
     table.index(['from']);
+    table.index(['to']);
+    table.index(['from', 'to']);
     table.index(['type']);
     table.index(['action_time']);
     table.index(['complete_time']);

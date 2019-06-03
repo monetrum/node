@@ -15,11 +15,11 @@
     "apollo-link": "^1.2.11",
     "apollo-link-http": "^1.5.14",
     "apollo-link-ws": "^1.0.17",
-    "base-58": "0.0.1",
+    "base-x": "^3.0.5",
     "dotenv": "^8.0.0",
     "elliptic": "^6.4.1",
-    "express": "^4.17.0",
-    "graphql": "^14.3.0",
+    "express": "^4.17.1",
+    "graphql": "^14.3.1",
     "http-proxy": "^1.17.0",
     "knex": "^0.16.5",
     "lodash": "^4.17.11",
@@ -31,12 +31,11 @@
     "speedtest-net": "^1.5.1",
     "sqlite3": "^4.0.8",
     "subscriptions-transport-ws": "^0.9.16",
-    "systeminformation": "^4.5.1",
+    "systeminformation": "^4.8.3",
     "ws": "^7.0.0"
   },
   "pkg": {
-    "assets": [
-    ],
+    "assets": [],
     "scripts": [
       "consts/**/*",
       "core/**/*",

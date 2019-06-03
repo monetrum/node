@@ -3,7 +3,10 @@
 const { ec: EC } = require('elliptic');
 const ec = new EC('secp256k1');
 const RIPEMD160 = require('ripemd160');
-const Base58 = require('base-58');
+const basex = require('base-x');
+const alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+const Base58 = basex(alphabet);
+// encode = buffer alıp string verir, decode = string alır buffer verir
 const crypto = require('crypto');
 
 
@@ -29,7 +32,7 @@ function checkPrivateKey(privateKey){
             return false;
         }
 
-        let hex = Buffer.from(Base58.decode(privateKey).buffer).toString('hex');
+        let hex = Base58.decode(privateKey).toString('hex');
         return /^[0-9A-Fa-f]{62,64}$/g.test(hex);
     } catch (e) {
         return false;
@@ -37,7 +40,7 @@ function checkPrivateKey(privateKey){
 }
 
 function addressFromPublicKey(publicKey){
-    return generateWalletAddress(Buffer.from(Base58.decode(publicKey).buffer));
+    return generateWalletAddress(Base58.decode(publicKey));
 }
 
 function generateWalletAddress(publicKey) {
@@ -53,7 +56,7 @@ function generateWalletAddress(publicKey) {
 
 function publicKeyFromPrivateKey(privateKey){
     let decoded = Base58.decode(privateKey);
-    let publicKey = Buffer.from(ec.keyFromPrivate(Buffer.from(decoded.buffer)).getPublic().encode('hex'), 'hex');
+    let publicKey = Buffer.from(ec.keyFromPrivate(decoded).getPublic().encode('hex'), 'hex');
     if(publicKey.slice(0,1).toString('hex') === '04'){
         publicKey = publicKey.slice(1);
     }
@@ -67,7 +70,7 @@ function verify(publicKey, msg, signature){
             return false;
         }
 
-        let pub = Buffer.from(Base58.decode(publicKey).buffer);
+        let pub = Base58.decode(publicKey);
         let hash = crypto.createHash('sha256').update(Buffer.from(msg, 'utf8')).digest().toString('hex');
         if(pub.slice(0,1).toString('hex') !== '04'){
             pub = Buffer.concat([Buffer.from('04', 'hex'), pub]);
@@ -81,7 +84,7 @@ function verify(publicKey, msg, signature){
 }
 
 function signing(privateKey, msg){
-    let key = ec.keyFromPrivate(Buffer.from(Base58.decode(privateKey)), 'hex');
+    let key = ec.keyFromPrivate(Base58.decode(privateKey), 'hex');
     let hash = crypto.createHash('sha256').update(Buffer.from(msg, 'utf8')).digest().toString('hex');
     let der = key.sign(hash, 'hex', { canonical: true }).toDER();
     return Buffer.from(der).toString('hex');
