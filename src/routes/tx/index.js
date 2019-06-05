@@ -21,14 +21,11 @@ router.get('/last-seq', async (req, res) => {
 router.get('/txes', async (req, res) => {
     let from = parseInt(req.query.from || 0);
     let limit = parseInt(req.query.limit || 1000);
-    if(limit > 1000){
-        limit = 1000;
-    }
-    
+    if(limit > 1000) limit = 1000;
     let txes = [];
     if(from !== NaN  || from !== Infinity){
         let remaining = limit;
-        let dbs = await knexPool.knex().table('dbs').where('min_seq', '>=', from).select('name').orderBy('min_seq', 'ASC');
+        let dbs = await knexPool.knex().table('dbs').where('max_seq', '>=', from).select('name').orderBy('min_seq', 'ASC');
         for(let db of dbs){
             let dbtxes = await knexPool.txpool().get(db.name).knex.table('tx').where('seq', '>', from).orderBy('seq', 'ASC').limit(remaining);
             txes = [...txes, ...dbtxes];
@@ -43,11 +40,11 @@ router.get('/txes', async (req, res) => {
 router.get('/tx', async (req, res) => {
     try {
         if(!req.query.hash && !req.query.seq){
-            res.json({ status: 'error', message: 'seq or hash required' });
+            res.json({ status: 'error', message: 'seq yada hash gereklidir' });
             return;
         }
     
-        let tx = {};
+        let tx = { };
         if(req.query.hash){
             tx = (await knexPool.poolMap(({ knex }) => knex.table('tx').where('hash', req.query.hash).limit(1).first()).find(x => x !== undefined));
         }
@@ -85,26 +82,30 @@ router.post('/txes', async (req, res) => {
 //---------------------------------------------------------------------------------------------------//
 
 router.post('/update-confirm-rate', async (req, res) => {
-    let seq = parseInt(req.body.seq || 0);
-    if(seq !== NaN || seq !== Infinity){
-        let dbinfo = knexPool.knex().table('dbs').where('max_seq', '>=', seq).where('min_seq', '<=', seq).limit(1).first();
-        if(dbinfo){
-            let connection = knexPool.txpool().get(dbinfo.name);
-            let tx = await connection.knex.table('tx').where('seq', seq).limit(1).first();
-            if(tx){
-                await connection.knex.table('tx').where('seq', seq).update({ confirm_rate: knex.raw('confirm_rate + 1') });
-                if(tx.node !== 'masternode'){
-                    await stc(async () => JSON.parse(await request.post(`${tx.node}/tx/update-confirm-rate`, { json: { seq }})));
-                    res.json({ status: 'ok' });
-                    return;
+    try {
+        let seq = parseInt(req.body.seq || 0);
+        if(seq !== NaN || seq !== Infinity){
+            let dbinfo = knexPool.knex().table('dbs').where('max_seq', '>=', seq).where('min_seq', '<=', seq).limit(1).first();
+            if(dbinfo){
+                let connection = knexPool.txpool().get(dbinfo.name);
+                let tx = await connection.knex.table('tx').where('seq', seq).limit(1).first();
+                if(tx){
+                    await connection.knex.table('tx').where('seq', seq).update({ confirm_rate: knex.raw('confirm_rate + 1') });
+                    if(tx.node !== 'masternode'){
+                        await stc(async () => JSON.parse(await request.post(`${tx.node}/tx/update-confirm-rate`, { json: { seq }})));
+                        res.json({ status: 'ok' });
+                        return;
+                    }
+                    
+                    await stc(async () => await client.mutation(queries.updateConfirmRate, { seq })); 
                 }
-                
-                await stc(async () => await client.mutation(queries.updateConfirmRate, { seq })); 
             }
         }
-    }
 
-    res.json({ status: 'ok' });
+        res.json({ status: 'ok' });
+    } catch (e) {
+        res.json({ status: 'error', message: e.message });
+    }
 });
 
 //------------------------------------------------------------------------------------------------------//
