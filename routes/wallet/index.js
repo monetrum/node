@@ -1,7 +1,7 @@
 'use strict';
 const express = require('express');
 const router = express.Router();
-const knex = registry.get('knex');
+const knexPool = registry.get('knexPool');
 const client = registry.get('client');
 const { queries } = registry.get('consts');
 const { ecdsa, queryBuilder } = registry.get('helpers');
@@ -15,7 +15,7 @@ router.post('/save', async (req, res) => {
         let { publicKey, address, privateKey } = ecdsa.createWallet();
         let resp = (await client.mutation(queries.save, { account_id, contract_id, wallet_data, public_key: publicKey, address })).wallet.save;
         let insert = { account_id, asset: 'MNT', address, insert_time: new Date().getTime(), public_key: publicKey, private_key: privateKey, contract_id };
-        let id = (await knex.table('wallets').insert(insert)).shift();
+        let id = (await knexPool.knex().table('wallets').insert(insert)).shift();
         res.json({ status: 'ok', wallet: { id, ...resp, ...insert } });
     } catch (e) {
         res.json({ status: 'error', message: e.message });
@@ -29,10 +29,9 @@ router.post('/generate', async (req, res) => {
         let { account_id, contract_id, wallet_data } = await validators.generate.validate(req.body, { allowUnknown: true });
         let { private_key, public_key, address } = (await client.mutation(queries.generate, { account_id, contract_id, wallet_data })).wallet.generate;
         let insert = { account_id, asset: 'MNT', address, insert_time: new Date().getTime(), public_key, private_key, contract_id };
-        let id = (await knex.table('wallets').insert(insert)).shift();
+        let id = (await knexPool.knex().table('wallets').insert(insert)).shift();
         res.json({ status: 'ok', wallet: { id, ...insert } });
     } catch (e) {
-        console.log(e);
         res.json({ status: 'error', message: e.message });
     }
 });
@@ -48,11 +47,11 @@ router.post('/import', async (req, res) => {
 
         let public_key = ecdsa.publicKeyFromPrivateKey(private_key);
         let address = ecdsa.addressFromPublicKey(public_key);
-        let first = await knex.table('wallets').where('address', '=' , address).select(['id']).limit(1).first();
+        let first = await knexPool.knex().table('wallets').where('address', '=' , address).select(['id']).limit(1).first();
         let id = 0;
         if(!first){
             let insert = { account_id, asset: 'MNT', address, insert_time: new Date().getTime(), public_key, private_key, contract_id };
-            id = (await knex.table('wallets').insert(insert)).shift();
+            id = (await knexPool.knex().table('wallets').insert(insert)).shift();
         }
 
         res.json({ status: 'ok', wallet: { id, ...insert} });
@@ -66,7 +65,7 @@ router.post('/import', async (req, res) => {
 router.post('/update', async (req, res) => {
     try {
         let { address, contract_id, wallet_data } = req.body;
-        let wallet = await knex.table('wallets').select(['id', 'public_key']).where('address', address || '1').limit(1).first();
+        let wallet = await knexPool.knex().table('wallets').select(['id', 'public_key']).where('address', address || '1').limit(1).first();
         if(!wallet){
             res.json({ status: 'error', message: 'This wallet is not registered in the local database' });
             return;
@@ -74,7 +73,7 @@ router.post('/update', async (req, res) => {
         
         let sign = ecdsa.signing(wallet.private_key, 'OK');
         let resp = (await client.mutation(queries.update, { public_key: wallet.public_key, sign, contract_id, wallet_data })).wallet.update;
-        await knex.table('wallets').where('address', address).update({ contract_id: contract_id || null });
+        await knexPool.knex().table('wallets').where('address', address).update({ contract_id: contract_id || null });
         res.json({ status: 'error', wallet: { id: wallet.id, ...resp } });
     } catch (e) {
         res.json({ status: 'error', message: e.message });
@@ -84,13 +83,17 @@ router.post('/update', async (req, res) => {
 //---------------------------------------------------------------------------------------------------------------------------------------------------------//
 
 router.get('/balance', async (req, res) => {
-    if(!req.query.address || !req.query.asset){
-        res.json({ status: 'ok', balance: 0 });
-        return;
+    try {
+        if(!req.query.address || !req.query.asset){
+            res.json({ status: 'ok', balance: 0 });
+            return;
+        }
+    
+        let balance = (await knexPool.poolMap(({ knex }) => knex.table('tx').where('from', req.query.address).where('asset', req.query.asset).whereIn('type', [ -2, 1, 2, 3, 4 ]).sum({ balance: 'amount'}).first())).reduce((acc, value) => value ? acc + value.balance : acc, 0);
+        res.json({ status: 'ok', balance });
+    } catch(e) {
+        res.json({ status: 'error', message: e.message });
     }
-
-    let first = await knex.table('tx').where('from', req.query.address).where('asset', req.query.asset).whereIn('type', [ -2, 1, 2, 3, 4 ]).sum({ balance: 'amount'}).first();
-    res.json({ status: 'ok', balance: first.balance || 0.00 });
 });
 
 //---------------------------------------------------------------------------------------------------------------------------------------------------------//
@@ -98,7 +101,7 @@ router.get('/balance', async (req, res) => {
 router.post('/wallets', async (req, res) => {
     try {
         let filter = await validators.wallets.validate(req.body);
-        let filteredKnex = queryBuilder(knex.table('wallets'), filter);
+        let filteredKnex = queryBuilder(knexPool.knex().table('wallets'), filter);
         let wallets = await filteredKnex.limit(1000);
         res.json({ status: 'ok', wallets });
     } catch (e){
@@ -110,7 +113,7 @@ router.post('/wallets', async (req, res) => {
 router.get('/wallet', async (req, res) => {
     try {
         let address = req.query.address;
-        let wallet = knex.table('wallet').where('address', address).limit(1).first();
+        let wallet = knexPool.knex().table('wallet').where('address', address).limit(1).first();
         res.json({ status: 'ok', wallet: wallet || { } });
     } catch (e) {
         res.json({ status: 'error', message: e.message });
