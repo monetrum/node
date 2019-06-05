@@ -1,6 +1,18 @@
 'use strict';
 
-const wallets = table => {
+const callbacks = { };
+
+callbacks.dbs = table => {
+    table.increments('id').primary();
+    table.string('name').notNullable();
+    table.integer('max_seq').notNullable();
+    table.integer('min_seq').notNullable();
+
+    table.index(['max_seq']);
+    table.index(['min_seq']);
+}
+
+callbacks.wallets = table => {
     table.increments('id').primary();
     table.string('account_id');
     table.string('asset');
@@ -18,7 +30,7 @@ const wallets = table => {
     table.unique(['address']);
 };
 
-const tx = table => {
+callbacks.tx = table => {
     table.increments('id').primary();
     table.string('from').notNullable();
     table.string('to').notNullable();
@@ -55,7 +67,7 @@ const tx = table => {
     table.index(['complete_time']);
 };
 
-const nodes = table => {
+callbacks.nodes = table => {
     table.increments('id').primary();
     table.string('ip').notNullable();
     table.integer('port').notNullable();
@@ -64,7 +76,7 @@ const nodes = table => {
     table.unique(['ip', 'port']);
 };
 
-const scinfo = table => {
+callbacks.scinfo = table => {
     table.increments('id').primary();
     table.string('address').notNullable();
     table.string('public_key').notNullable();
@@ -72,23 +84,32 @@ const scinfo = table => {
     table.unique(['address', 'public_key']);
 };
 
-async function migration(knex){
-
-    if(!(await knex.schema.hasTable('wallets'))){
-        await knex.schema.createTable('wallets', wallets);
+async function migration(knex, cbname){
+    if(!(await knex.schema.hasTable(cbname))){
+        await knex.schema.createTable(cbname, callbacks[cbname]);
     }
 
-    if(!(await knex.schema.hasTable('tx'))){
-        await knex.schema.createTable('tx', tx);
-    }
-
-    if(!(await knex.schema.hasTable('nodes'))){
-        await knex.schema.createTable('nodes', nodes);
-    }
-
-    if(!(await knex.schema.hasTable('scinfo'))){
-        await knex.schema.createTable('scinfo', scinfo);
-    }
+    return;
 }
+
+
+// async function migration(knex){
+
+//     if(!(await knex.schema.hasTable('wallets'))){
+//         await knex.schema.createTable('wallets', wallets);
+//     }
+
+//     if(!(await knex.schema.hasTable('tx'))){
+//         await knex.schema.createTable('tx', tx);
+//     }
+
+//     if(!(await knex.schema.hasTable('nodes'))){
+//         await knex.schema.createTable('nodes', nodes);
+//     }
+
+//     if(!(await knex.schema.hasTable('scinfo'))){
+//         await knex.schema.createTable('scinfo', scinfo);
+//     }
+// }
 
 module.exports = migration;

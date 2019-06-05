@@ -20,5 +20,5 @@ node_modules
 package-lock.json
 monetrum-node
 build.txt
-data.db
+data
 release
