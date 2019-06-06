@@ -90,8 +90,10 @@ async function init(workerId, emitter){
             vacuumWorking = true;
             let res = await stc(async () => {
                 await knexPool.knex().raw('VACUUM');
-                for(let connection of knexPool.txpool().values){
+                console.log('main.db vakumlandı');
+                for(let connection of knexPool.txpool().values()){
                     await connection.knex.raw('VACUUM');
+                    console.log( connection.name ,' vakumlandı');
                 }
             });
 
