@@ -33,14 +33,8 @@ validators.wallets = joi.array().items(
         operator: joi.string().required().valid(['>', '<', '>=', '<=', '=', 'IN', 'NOT IN']),
         value: joi.any().required()
     }),
-    
-    joi.object({
-        or: joi.lazy(() => validators.wallets)
-    }),
-
-    joi.object({
-        and: joi.lazy(() => validators.wallets)
-    })
+    joi.object({ or: joi.lazy(() => validators.wallets) }),
+    joi.object({ and: joi.lazy(() => validators.wallets) })
 )
 
 module.exports = validators;

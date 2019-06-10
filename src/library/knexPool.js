@@ -6,10 +6,10 @@ const { migration } = registry.get('consts');
 const Knex = require('knex');
 const emitter = registry.get('emitter');
 const pool = new Map();
-
-//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
-emitter.on('ADD_DB', data => pool.set(data.name, { name: data.name, knex: Knex({ client: 'sqlite3', connection: { filename: path.join(cwd, 'data', data.name) }, useNullAsDefault: true }) }));
-//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+const workerId = registry.get('workerId');
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
+emitter.on('ADD_DB', ({ id, data }) => { if(id !== workerId) pool.set(data.name, { name: data.name, knex: Knex({ client: 'sqlite3', connection: { filename: path.join(cwd, 'data', data.name) }, useNullAsDefault: true }) }) });
+//-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------//
 
 class KnexPool {
     constructor(){
@@ -28,16 +28,14 @@ class KnexPool {
                     let dbs = await this._knex.table('dbs').where('id', '>', lastdb).limit(1000);
                     if(dbs.length === 0) break;
                     lastdb = dbs[ dbs.length - 1 ].id;
-                    for(let db of dbs){
-                        pool.set(db.name, { name: db.name, knex: Knex({ client: 'sqlite3', connection: { filename: path.join(cwd, 'data', db.name) }, useNullAsDefault: true }) });
-                    }
+                    for(let db of dbs) pool.set(db.name, { name: db.name, knex: Knex({ client: 'sqlite3', connection: { filename: path.join(cwd, 'data', db.name) }, useNullAsDefault: true }) });
                 }
 
                 if(lastdb === 0){
                     pool.set('tx-1-1000000.db',{ name: 'tx-1-1000000.db', knex: Knex({ client: 'sqlite3', connection: { filename: path.join(cwd, 'data', 'tx-1-1000000.db') }, useNullAsDefault: true }) });
                     await migration(pool.get('tx-1-1000000.db').knex, 'tx');
                     await this._knex.table('dbs').insert({ name: 'tx-1-1000000.db', min_seq: 1, max_seq: 1000000 });
-                    emitter.emit('ADD_DB', { name: 'tx-1-1000000.db', min_seq: 1, max_seq: 1000000 });
+                    emitter.emit('ADD_DB', { id: workerId, data: { name: 'tx-1-1000000.db', min_seq: 1, max_seq: 1000000 } });
                 }
 
                 return true;
@@ -52,7 +50,7 @@ class KnexPool {
         pool.set(`tx-${minSeq}-${maxSeq}.db`, { name: `tx-${minSeq}-${maxSeq}.db`, knex: Knex({ client: 'sqlite3', connection: { filename: path.join(cwd, 'data', `tx-${minSeq}-${maxSeq}.db`) }, useNullAsDefault: true }) });
         await this._knex.table('dbs').insert({ name: `tx-${minSeq}-${maxSeq}.db`, min_seq: minSeq, max_seq: maxSeq });
         await migration(pool.get(`tx-${minSeq}-${maxSeq}.db`).knex, 'tx');
-        emitter.emit('ADD_DB', { name: `tx-${minSeq}-${maxSeq}.db`, min_seq: minSeq, max_seq: maxSeq });
+        emitter.emit('ADD_DB', { id: workerId, data: { name: `tx-${minSeq}-${maxSeq}.db`, min_seq: minSeq, max_seq: maxSeq } });
         return pool.get(`tx-${minSeq}-${maxSeq}.db`);
     }
 

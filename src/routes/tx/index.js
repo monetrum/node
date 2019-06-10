@@ -113,7 +113,7 @@ router.post('/update-confirm-rate', async (req, res) => {
 router.post('/send', async (req, res) => {
     try {
         let { from, to, amount, asset, fee_from, desc, data, forms } = req.body;
-        let wallet = await knex.table('wallets').select(['id', 'private_key', 'public_key']).where('address', from || 'x').first();
+        let wallet = await knexPool.knex().table('wallets').select(['id', 'private_key', 'public_key']).where('address', from || 'x').first();
         if(!wallet){
             res.json({ status: 'error', message: 'This wallet is not registered in the local database' });
             return;

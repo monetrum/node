@@ -24,10 +24,17 @@ class Sync {
             this.client = client;
             //---------------------------------------------------------------------------------------------------------------------------------------------------------------//            
             let sendinfo = await stc(async () => await this.client.mutation(queries.addNode, { info: { ... await systeminfo(), port: parseInt(env.LISTEN_PORT), ssl: env.SSL === '1' }}));
-            if(sendinfo instanceof Error) reject(sendinfo);
+            if(sendinfo instanceof Error) {
+                reject(sendinfo);
+                return;
+            }
             //---------------------------------------------------------------------------------------------------------------------------------------------------------------//
             let scinfo = await stc(() => this.client.query(queries.scinfo, {}));
-            if(scinfo instanceof Error) reject(scinfo);
+            if(scinfo instanceof Error) {
+                reject(scinfo);
+                return;
+            }
+
             let { address, public_key } = scinfo.smartContractInfo;
             let exists = await knexPool.knex().table('scinfo').where('address', address).where('public_key', public_key).limit(1).first();
             if(!exists){
@@ -112,6 +119,7 @@ class Sync {
             }
 
             if(resp.tx.getTxList.transactions.find(tx => tx.type === -1 || tx.type === -2 )){
+                console.log('okokokokok')
                 await sleep(2000);
                 continue;
             }

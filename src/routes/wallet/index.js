@@ -49,8 +49,8 @@ router.post('/import', async (req, res) => {
         let address = ecdsa.addressFromPublicKey(public_key);
         let first = await knexPool.knex().table('wallets').where('address', '=' , address).select(['id']).limit(1).first();
         let id = 0;
+        let insert = { account_id, asset: 'MNT', address, insert_time: new Date().getTime(), public_key, private_key, contract_id };
         if(!first){
-            let insert = { account_id, asset: 'MNT', address, insert_time: new Date().getTime(), public_key, private_key, contract_id };
             id = (await knexPool.knex().table('wallets').insert(insert)).shift();
         }
 
@@ -65,7 +65,7 @@ router.post('/import', async (req, res) => {
 router.post('/update', async (req, res) => {
     try {
         let { address, contract_id, wallet_data } = req.body;
-        let wallet = await knexPool.knex().table('wallets').select(['id', 'public_key']).where('address', address || '1').limit(1).first();
+        let wallet = await knexPool.knex().table('wallets').select(['id', 'public_key', 'private_key']).where('address', address || '1').limit(1).first();
         if(!wallet){
             res.json({ status: 'error', message: 'This wallet is not registered in the local database' });
             return;
@@ -113,7 +113,7 @@ router.post('/wallets', async (req, res) => {
 router.get('/wallet', async (req, res) => {
     try {
         let address = req.query.address;
-        let wallet = knexPool.knex().table('wallet').where('address', address).limit(1).first();
+        let wallet = knexPool.knex().table('wallet').where('address', address || '1').limit(1).first();
         res.json({ status: 'ok', wallet: wallet || { } });
     } catch (e) {
         res.json({ status: 'error', message: e.message });
