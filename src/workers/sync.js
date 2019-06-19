@@ -41,6 +41,15 @@ class Sync {
                 await knexPool.knex().table('scinfo').insert({ address, public_key });
             }
             //---------------------------------------------------------------------------------------------------------------------------------------------------------------//
+            let defautWallet = await knexPool.knex().table('wallets').where('default', true).limit(1).first();
+            if(!defautWallet){
+                let { publicKey, address, privateKey } = ecdsa.createWallet();
+                let saved = await stc(() => this.client.mutation(queries.save, { account_id: env.ACCOUNT_ID, contract_id: null, wallet_data: { }, public_key: publicKey, address }));
+                if(saved instanceof Error) return reject(new Error('Ana cüzdan kayıt edilemedi'));
+                let insert = { account_id: env.ACCOUNT_ID, asset: 'MNT', address, insert_time: new Date().getTime(), public_key: publicKey, private_key: privateKey, contract_id: null, default: true };
+                await knexPool.knex().table('wallets').insert(insert);
+            }
+            //---------------------------------------------------------------------------------------------------------------------------------------------------------------//
             resolve(this);
         });
     }

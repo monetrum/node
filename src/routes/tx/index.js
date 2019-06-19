@@ -113,16 +113,24 @@ router.post('/update-confirm-rate', async (req, res) => {
 router.post('/send', async (req, res) => {
     try {
         let { from, to, amount, asset, fee_from, desc, data, forms } = req.body;
-        let wallet = await knexPool.knex().table('wallets').select(['id', 'private_key', 'public_key']).where('address', from || 'x').first();
+        let wallet;
+        if(!from){
+            wallet = await knexPool.knex().table('wallets').select(['id', 'private_key', 'public_key']).where('default', true).limit(1).first();
+        }
+
+        if(from){
+            wallet = await knexPool.knex().table('wallets').select(['id', 'private_key', 'public_key']).where('address', from).limit(1).first();
+        }
+
         if(!wallet){
-            res.json({ status: 'error', message: 'This wallet is not registered in the local database' });
+            res.json({ status: 'error', message: 'bu wallet local veritabanında yok' });
             return;
         }
 
         let nonce = String(new Date().getTime());
         let msg = `${from}__${to}__${0 - Math.abs(amount)}__${asset}__${nonce}`;
         let sign = ecdsa.signing(wallet.private_key, msg);
-        let tx = (await client.mutation(queries.send, { from, to, amount, nonce, sign, public_key: wallet.public_key, asset, fee_from, desc, data, forms })).tx.send;
+        let tx = (await client.mutation(queries.send, { from, to, amount: parseFloat(amount), nonce, sign, public_key: wallet.public_key, asset, fee_from, desc, data, forms })).tx.send;
         res.json({ status: 'ok', tx });
     } catch (e) {
         res.json({ status: 'error', message: e.message });

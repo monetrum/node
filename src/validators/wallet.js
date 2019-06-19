@@ -4,7 +4,7 @@ const validators = { };
 //---------------------------------------------------------------//
 
 validators.save = joi.object({
-    account_id: joi.string().regex(/^[0-9a-fA-F]{24}$/i).required(),
+    account_id: joi.string().regex(/^[0-9a-fA-F]{24}$/i),
     contract_id: joi.string().regex(/^[0-9a-fA-F]{24}$/i),
     wallet_data: joi.object({ })
 });
@@ -20,7 +20,7 @@ validators.generate = joi.object({
 //-----------------------------------------------------------------//
 
 validators.import = joi.object({
-    account_id: joi.string().regex(/^[0-9a-fA-F]{24}$/i).required(),
+    account_id: joi.string().regex(/^[0-9a-fA-F]{24}$/i),
     contract_id: joi.string().regex(/^[0-9a-fA-F]{24}$/i),
     private_key: joi.string().required()
 });
