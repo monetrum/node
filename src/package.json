@@ -1,5 +1,5 @@
 {
-  "name": "monetrum-node",
+  "name": "monetrumd",
   "version": "1.0.1",
   "description": "",
   "main": "app.js",

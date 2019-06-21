@@ -10,6 +10,7 @@ validators.env = joi.object({
     SSL: joi.string().regex(/\d+/i).required(),
     IP_WHITE_LIST: joi.string().required(),
     THREADS: joi.string().regex(/\d+/i).required(),
+    ACCOUNT_ID: joi.string().regex(/^[0-9a-fA-F]{24}$/i).required()
 });
 
 module.exports = validators;

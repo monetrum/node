@@ -15,24 +15,24 @@ const httpProxy = require('http-proxy');
 const validator = require('./validators/env');
 const { EventEmitter } = require('cluster-events');
 
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+app.use('/tx', bodyParser.urlencoded({ extended: false }), bodyParser.json());
+app.use('/wallet', bodyParser.urlencoded({ extended: false }), bodyParser.json());
 
 async function init(workerId, emitter){
     await validator.env.validate(env);
-    // let knex = require('knex')({ client: 'sqlite3', connection: { filename: path.join(cwd, 'data.db') }, useNullAsDefault: true });
+    //---------------------------------------------------------------------------//
     let proxy = httpProxy.createProxyServer({ });
-    
     proxy.on('error', e => console.error(e.message));
-    
+    //--------------------------------------------------------------------------//
+
     registry.set('emitter', emitter);
     registry.set('proxy', proxy);
-    // registry.set('knex', knex);
     registry.set('app', app);
     registry.set('env', env);
     registry.set('helpers', requireDir(__dirname + '/helpers', { recurse: true }));
     registry.set('consts', requireDir(__dirname + '/consts', { recurse: true }));
     registry.set('IP_WHITE_LIST', env.IP_WHITE_LIST.split(',').map(x => x.trim()));
+    registry.set('workerId', workerId);
     //-----------------------------------------------------------------------------//
     
     let { loader, createClient, stc } = registry.get('helpers');
@@ -59,15 +59,10 @@ async function init(workerId, emitter){
         //----------------------------------------------------------------------------//
         let txWorking = false;
         let txIntervalcb = async () => {
-            if(txWorking === true){
-                return;
-            }
-
+            if(txWorking === true) return;
             txWorking = true;
             let res = await stc(() => sync.txSynchronize());
-            if(res instanceof Error){
-                console.error(res);
-            }
+            if(res instanceof Error) console.error(res);
             txWorking = false;
         };
 
@@ -90,8 +85,10 @@ async function init(workerId, emitter){
             vacuumWorking = true;
             let res = await stc(async () => {
                 await knexPool.knex().raw('VACUUM');
-                for(let connection of knexPool.txpool().values){
+                console.log('main.db vakumlandı');
+                for(let connection of knexPool.txpool().values()){
                     await connection.knex.raw('VACUUM');
+                    console.log(connection.name, 'vakumlandı');
                 }
             });
 
@@ -133,7 +130,7 @@ if(cluster.isMaster){
     });
 
 } else {
-    let emitter = new EventEmitter('xxxxxxxx');
+    let emitter = new EventEmitter('nodes');
     init(cluster.worker.id, emitter).then(() => console.log('node başladı', env.LISTEN_HOST, env.LISTEN_PORT, cluster.worker.id)).catch(e => console.error(e));
 }
 

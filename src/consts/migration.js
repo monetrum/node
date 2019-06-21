@@ -14,6 +14,7 @@ callbacks.dbs = table => {
 
 callbacks.wallets = table => {
     table.increments('id').primary();
+    table.boolean('default').default(false);
     table.string('account_id');
     table.string('asset');
     table.string('address').notNullable();
@@ -23,6 +24,7 @@ callbacks.wallets = table => {
     table.string('contract_id');
     table.timestamps(false, true);
     
+    table.index(['default']);
     table.index(['account_id']);
     table.index(['asset']);
     table.unique(['public_key']);
