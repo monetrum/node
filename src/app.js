@@ -131,6 +131,6 @@ if(cluster.isMaster){
 
 } else {
     let emitter = new EventEmitter('nodes');
-    init(cluster.worker.id, emitter).then(() => console.log('node başladı', env.LISTEN_HOST, env.LISTEN_PORT, cluster.worker.id)).catch(e => console.error(e));
+    init(cluster.worker.id, emitter).then(() => console.log('worker başladı', env.LISTEN_HOST, env.LISTEN_PORT, cluster.worker.id)).catch(e => console.error(e));
 }
 
